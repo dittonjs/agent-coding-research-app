@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- React Refresh: required when HTML is served by backend (see Vite backend integration) -->
+    <script type="module">
+      import RefreshRuntime from '{{viteOrigin}}/@react-refresh'
+      RefreshRuntime.injectIntoGlobalHook(window)
+      window.$RefreshReg$ = () => {}
+      window.$RefreshSig$ = () => (type) => type
+      window.__vite_plugin_react_preamble_installed__ = true
+    </script>
+    <script type="module" src="{{viteOrigin}}/@vite/client"></script>
+    <script type="module" src="{{viteOrigin}}/src/main.jsx"></script>
+  </body>
+</html>
