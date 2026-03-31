@@ -1,6 +1,7 @@
 import pool from "../db/connection.js";
 import crypto from "crypto";
 import { createUser, createSession } from "./users.js";
+import { getActiveStudy } from "./studies.js";
 
 export async function createAnonymousParticipant() {
   const uuid = crypto.randomUUID();
@@ -13,11 +14,13 @@ export async function createAnonymousParticipant() {
 
   const groupAssignment = Math.random() < 0.5 ? "control" : "test";
 
+  const activeStudy = await getActiveStudy();
+
   const result = await pool.query(
-    `INSERT INTO participants (user_id, group_assignment, consent_accepted, consent_timestamp, current_step)
-     VALUES ($1, $2, TRUE, NOW(), 2)
+    `INSERT INTO participants (user_id, group_assignment, consent_accepted, consent_timestamp, current_step, study_id)
+     VALUES ($1, $2, TRUE, NOW(), 2, $3)
      RETURNING *`,
-    [user.id, groupAssignment]
+    [user.id, groupAssignment, activeStudy?.id || null]
   );
 
   return { participant: result.rows[0], user, sessionId };
@@ -35,15 +38,15 @@ export async function updateDemographics(participantId, data) {
   const result = await pool.query(
     `UPDATE participants
      SET age_range = $1, gender = $2, cs_year = $3,
-         prior_programming_experience = $4, prior_ai_usage = $5, current_step = 3
+         prior_ai_usage = $4, ethnicity = $5, current_step = 3
      WHERE id = $6
      RETURNING *`,
     [
       data.ageRange,
       data.gender,
       data.csYear,
-      data.priorProgrammingExperience,
       data.priorAiUsage,
+      data.ethnicity,
       participantId,
     ]
   );

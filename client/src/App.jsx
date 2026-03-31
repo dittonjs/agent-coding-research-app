@@ -10,7 +10,11 @@ import CodingChallenge from "./pages/CodingChallenge";
 import PostTest from "./pages/PostTest";
 import PostSurvey from "./pages/PostSurvey";
 import StudyComplete from "./pages/StudyComplete";
-import Admin from "./pages/Admin";
+import AdminLayout from "./pages/admin/AdminLayout";
+import StudiesList from "./pages/admin/StudiesList";
+import CreateStudy from "./pages/admin/CreateStudy";
+import StudyDetail from "./pages/admin/StudyDetail";
+import ParticipantDetail from "./pages/admin/ParticipantDetail";
 
 function StudyFlow() {
   const { participant, loading } = useStudy();
@@ -55,7 +59,12 @@ function StudyFlow() {
 function App() {
   return (
     <Routes>
-      <Route path="/admin" element={<Admin />} />
+      <Route path="/admin" element={<AdminLayout />}>
+        <Route index element={<StudiesList />} />
+        <Route path="studies/new" element={<CreateStudy />} />
+        <Route path="studies/:studyId" element={<StudyDetail />} />
+        <Route path="studies/:studyId/participants/:participantId" element={<ParticipantDetail />} />
+      </Route>
       <Route path="*" element={<StudyFlow />} />
     </Routes>
   );

@@ -6,8 +6,10 @@ export default function DemographicSurvey() {
   const [form, setForm] = useState({
     ageRange: "",
     gender: "",
+    genderOther: "",
+    ethnicity: "",
+    ethnicityOther: "",
     csYear: "",
-    priorProgrammingExperience: "",
     priorAiUsage: "",
   });
   const [error, setError] = useState("");
@@ -22,11 +24,19 @@ export default function DemographicSurvey() {
     setSubmitting(true);
     setError("");
 
+    const payload = {
+      ...form,
+      gender: form.gender === "other" ? `other: ${form.genderOther}` : form.gender,
+      ethnicity: form.ethnicity === "other" ? `other: ${form.ethnicityOther}` : form.ethnicity,
+    };
+    delete payload.genderOther;
+    delete payload.ethnicityOther;
+
     try {
       const res = await fetch("/api/study/demographics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -66,12 +76,57 @@ export default function DemographicSurvey() {
           Gender
           <select name="gender" value={form.gender} onChange={handleChange} required>
             <option value="">Select...</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
+            <option value="man">Man</option>
+            <option value="woman">Woman</option>
             <option value="non-binary">Non-binary</option>
+            <option value="other">Other (please specify)</option>
             <option value="prefer-not-to-say">Prefer not to say</option>
           </select>
         </label>
+
+        {form.gender === "other" && (
+          <label>
+            Please specify gender
+            <input
+              type="text"
+              name="genderOther"
+              value={form.genderOther}
+              onChange={handleChange}
+              required
+              placeholder="Enter your gender"
+            />
+          </label>
+        )}
+
+        <label>
+          Ethnicity
+          <select name="ethnicity" value={form.ethnicity} onChange={handleChange} required>
+            <option value="">Select...</option>
+            <option value="white">White</option>
+            <option value="black">Black or African American</option>
+            <option value="hispanic">Hispanic or Latino</option>
+            <option value="asian">Asian</option>
+            <option value="native-american">American Indian or Alaska Native</option>
+            <option value="pacific-islander">Native Hawaiian or Pacific Islander</option>
+            <option value="multiracial">Multiracial</option>
+            <option value="other">Other (please specify)</option>
+            <option value="prefer-not-to-say">Prefer not to say</option>
+          </select>
+        </label>
+
+        {form.ethnicity === "other" && (
+          <label>
+            Please specify ethnicity
+            <input
+              type="text"
+              name="ethnicityOther"
+              value={form.ethnicityOther}
+              onChange={handleChange}
+              required
+              placeholder="Enter your ethnicity"
+            />
+          </label>
+        )}
 
         <label>
           Year in CS Program
@@ -82,22 +137,6 @@ export default function DemographicSurvey() {
             <option value="junior">Junior</option>
             <option value="senior">Senior</option>
             <option value="graduate">Graduate</option>
-          </select>
-        </label>
-
-        <label>
-          Prior Programming Experience
-          <select
-            name="priorProgrammingExperience"
-            value={form.priorProgrammingExperience}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Select...</option>
-            <option value="none">None</option>
-            <option value="less_than_1_year">Less than 1 year</option>
-            <option value="1_2_years">1–2 years</option>
-            <option value="3_plus_years">3+ years</option>
           </select>
         </label>
 

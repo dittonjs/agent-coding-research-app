@@ -8,14 +8,17 @@
     "client-dev": "vite client",
     "migrate": "node server/migrate.js",
     "seed-admin": "node server/seed-admin.js",
+    "build": "vite build client",
     "mock-viz": "python3 -m http.server 8080 --directory mock-viz",
-    "reset-study": "node server/reset-study.js"
+    "reset-study": "node server/reset-study.js",
+    "start": "node server/server.js"
   },
   "dependencies": {
     "@langchain/core": "^1.1.36",
     "@langchain/langgraph": "^1.2.6",
     "@langchain/openai": "^1.3.1",
     "@monaco-editor/react": "^4.7.0",
+    "archiver": "^7.0.1",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",

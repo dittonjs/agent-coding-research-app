@@ -40,18 +40,35 @@ export default function Instructions() {
       <div className="instructions-content">
         <p>
           In the next step, you will see a visualization of the <strong>selection sort</strong> algorithm.
-          Your task is to implement the selection sort algorithm in JavaScript based on what you observe
-          in the visualization.
+          Your task is to implement the selection sort algorithm based on what you observe
+          in the visualization. You can select your preferred programming language from the
+          dropdown menu above the editor.
         </p>
-
-        <p>You will have <strong>8 minutes</strong> to complete the challenge.</p>
 
         {isTestGroup ? (
           <div className="instructions-group">
             <p>
               You will be using an <strong>AI assistant</strong> to write your code.
-              You will not be able to edit the code directly. Instead, describe what
-              you want the code to do and the AI will write it for you.
+              You will not be able to edit the code directly. Instead, you will type
+              instructions to the AI describing what code to write, and it will make
+              the changes for you.
+            </p>
+            <p>
+              The AI will write whatever code you tell it to, but it won't think for
+              you. It will not explain algorithms, solve problems, or decide what to
+              write next — you need to tell it exactly what to add or change.
+            </p>
+            <p><strong>Examples of things you can tell the AI:</strong></p>
+            <ul>
+              <li>"Add a for loop that goes from 0 to 10"</li>
+              <li>"Declare a variable called temp"</li>
+              <li>"Add an if statement that checks if x is less than y"</li>
+              <li>"Add a return statement"</li>
+              <li>"Delete line 3"</li>
+              <li>"Move the if statement inside the for loop"</li>
+            </ul>
+            <p>
+              When you are finished, click the <strong>Submit</strong> button.
             </p>
           </div>
         ) : (

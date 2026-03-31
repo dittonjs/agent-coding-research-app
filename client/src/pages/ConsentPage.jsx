@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useStudy } from "../hooks/useStudy";
 
 export default function ConsentPage() {
   const { setParticipant } = useStudy();
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [studyActive, setStudyActive] = useState(null); // null = loading
+
+  useEffect(() => {
+    fetch("/api/study/active-check")
+      .then((res) => res.json())
+      .then((data) => setStudyActive(data.active))
+      .catch(() => setStudyActive(false));
+  }, []);
 
   async function handleAccept() {
     setSubmitting(true);
@@ -30,6 +38,17 @@ export default function ConsentPage() {
       setError("Network error. Please try again.");
       setSubmitting(false);
     }
+  }
+
+  if (studyActive === null) return <p>Loading...</p>;
+
+  if (!studyActive) {
+    return (
+      <div className="consent-page">
+        <h2>Study Not Available</h2>
+        <p>There is no active study running at this time. Please check back later.</p>
+      </div>
+    );
   }
 
   return (

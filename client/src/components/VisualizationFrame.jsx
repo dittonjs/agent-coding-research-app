@@ -1,21 +1,7 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useRef } from "react";
 
-const VisualizationFrame = forwardRef(function VisualizationFrame(
-  { src, onMessage, onReady },
-  ref
-) {
+export default function VisualizationFrame({ src, onVizEvent }) {
   const iframeRef = useRef(null);
-
-  function sendToIframe(message) {
-    if (iframeRef.current?.contentWindow && src) {
-      const origin = new URL(src).origin;
-      iframeRef.current.contentWindow.postMessage(message, origin);
-    }
-  }
-
-  useImperativeHandle(ref, () => ({
-    send: sendToIframe,
-  }));
 
   useEffect(() => {
     function handleMessage(event) {
@@ -24,22 +10,19 @@ const VisualizationFrame = forwardRef(function VisualizationFrame(
           const allowedOrigin = new URL(src).origin;
           if (event.origin !== allowedOrigin) return;
         } catch {
-          // If src is not a valid URL yet, skip origin check
+          return;
         }
       }
 
-      const { type, payload } = event.data || {};
-
-      if (type === "READY") {
-        onReady?.();
-      } else if (type === "SHOW_ALGORITHM" || type === "IDENTIFICATION_RESULT") {
-        onMessage?.({ type, ...payload });
+      const data = event.data;
+      if (data && data.eventType) {
+        onVizEvent?.(data);
       }
     }
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [src, onMessage, onReady]);
+  }, [src, onVizEvent]);
 
   if (!src) {
     return (
@@ -57,6 +40,4 @@ const VisualizationFrame = forwardRef(function VisualizationFrame(
       title="Algorithm Visualization"
     />
   );
-});
-
-export default VisualizationFrame;
+}

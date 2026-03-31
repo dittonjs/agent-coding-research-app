@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useImperativeHandle, forwardRef } from "react";
 
-const Timer = forwardRef(function Timer({ durationSeconds, onExpire, autoStart = true, storageKey }, ref) {
+const Timer = forwardRef(function Timer({ durationSeconds, onExpire, autoStart = true, storageKey, hidden = false }, ref) {
   const resolvedKey = storageKey || null;
 
   function getSavedStartTime() {
@@ -88,6 +88,8 @@ const Timer = forwardRef(function Timer({ durationSeconds, onExpire, autoStart =
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [durationSeconds]);
+
+  if (hidden) return null;
 
   const minutes = Math.floor(secondsLeft / 60);
   const secs = secondsLeft % 60;

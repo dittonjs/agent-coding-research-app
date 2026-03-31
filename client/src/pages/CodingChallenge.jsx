@@ -5,8 +5,8 @@ import Timer from "../components/Timer";
 import VisualizationFrame from "../components/VisualizationFrame";
 import ChatPanel from "../components/ChatPanel";
 
-const CHALLENGE_DURATION = 480; // 8 minutes
-const VISUALIZATION_URL = import.meta.env.VITE_VISUALIZATION_URL || null;
+const CHALLENGE_DURATION = 600; // 10 minutes
+const VISUALIZATION_URL = "https://sulovebhattarai.github.io/selection_sort_animation/";
 
 const LANGUAGES = [
   { value: "javascript", label: "JavaScript" },
@@ -67,20 +67,27 @@ export default function CodingChallenge() {
   const [language, setLanguage] = useState(savedLang);
   const [code, setCode] = useState(savedCode);
   const [submitted, setSubmitted] = useState(false);
-  const [vizReady, setVizReady] = useState(false);
   const [error, setError] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const [agentLoading, setAgentLoading] = useState(false);
   const [checkResult, setCheckResult] = useState(null);
   const [checking, setChecking] = useState(false);
+  const [expired, setExpired] = useState(false);
   const timerRef = useRef(null);
-  const iframeRef = useRef(null);
   const editorRef = useRef(null);
   const codeRef = useRef(code);
+
+  // Editor event recording
+  const eventsBufferRef = useRef([]);
+  const batchSeqRef = useRef(0);
+  const flushTimerRef = useRef(null);
+  const sessionStartRef = useRef(Date.now());
+  const pastedRef = useRef(false);
 
   codeRef.current = code;
 
   const isTestGroup = participant?.groupAssignment === "test";
+  const timerEnabled = participant?.timerEnabled !== false;
 
   // Persist code and language to localStorage
   useEffect(() => {
@@ -108,13 +115,98 @@ export default function CodingChallenge() {
     }
   }, [isTestGroup]);
 
-  const handleVizReady = useCallback(() => {
-    setVizReady(true);
-    iframeRef.current?.send({ type: "START", payload: { algorithm: "selection_sort" } });
+  // Flush buffered editor events to the server
+  const flushEditorEvents = useCallback(() => {
+    const events = eventsBufferRef.current;
+    if (events.length === 0) return;
+
+    eventsBufferRef.current = [];
+    const seq = batchSeqRef.current++;
+
+    fetch("/api/study/editor-events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ events, batchSeq: seq }),
+    }).catch(() => {});
+  }, []);
+
+  // Flush on an interval and on unmount
+  useEffect(() => {
+    flushTimerRef.current = setInterval(flushEditorEvents, 5000);
+    return () => {
+      clearInterval(flushTimerRef.current);
+      flushEditorEvents();
+    };
+  }, [flushEditorEvents]);
+
+  function classifySource(changes) {
+    // Multiple ranges changed at once → likely autocomplete or bracket auto-close
+    if (changes.length > 1) return "autocomplete";
+
+    const change = changes[0];
+    const inserted = change.text;
+    const rangeLen =
+      change.rangeLength !== undefined
+        ? change.rangeLength
+        : 0;
+
+    // Pure deletion (no text inserted, range removed)
+    if (inserted === "" && rangeLen > 0) return "delete";
+
+    // Use the paste flag set by Monaco's onDidPaste
+    if (pastedRef.current) {
+      pastedRef.current = false;
+      return "paste";
+    }
+
+    // Multi-char insert that wasn't a paste → autocomplete
+    if (inserted.length > 2) return "autocomplete";
+    if (inserted.includes("\n") && inserted.length > 1) return "autocomplete";
+
+    // Single char or two chars (e.g. bracket auto-close) → typing
+    return "type";
+  }
+
+  const handleVizEvent = useCallback((event) => {
+    // Record visualization interactions (play/replay/randomize) as editor events
+    eventsBufferRef.current.push({
+      ts: Date.now() - sessionStartRef.current,
+      source: "visualization",
+      eventType: event.eventType,
+      vizTimestamp: event.timestamp,
+    });
   }, []);
 
   const handleEditorMount = useCallback((editor) => {
     editorRef.current = editor;
+
+    // Flag paste events so classifySource can distinguish from autocomplete
+    editor.onDidPaste(() => {
+      pastedRef.current = true;
+    });
+
+    editor.onDidChangeModelContent((e) => {
+      let source = classifySource(e.changes);
+      if (e.isUndoing) source = "undo";
+      if (e.isRedoing) source = "redo";
+
+      const event = {
+        ts: Date.now() - sessionStartRef.current,
+        source,
+        changes: e.changes.map((c) => ({
+          range: {
+            startLine: c.range.startLineNumber,
+            startCol: c.range.startColumn,
+            endLine: c.range.endLineNumber,
+            endCol: c.range.endColumn,
+          },
+          rangeLength: c.rangeLength,
+          text: c.text,
+        })),
+      };
+
+      eventsBufferRef.current.push(event);
+    });
   }, []);
 
   function handleLanguageChange(e) {
@@ -131,6 +223,15 @@ export default function CodingChallenge() {
         codeSnapshot: codeRef.current,
       }),
     }).catch(() => {});
+
+    // Record language change as an editor event
+    eventsBufferRef.current.push({
+      ts: Date.now() - sessionStartRef.current,
+      source: "language-change",
+      fromLanguage: oldLang,
+      toLanguage: newLang,
+      fullContent: STARTER_CODE[newLang],
+    });
 
     setLanguage(newLang);
     const newCode = STARTER_CODE[newLang];
@@ -180,6 +281,12 @@ export default function CodingChallenge() {
           { role: "assistant", content: data.error, id: `a-${Date.now()}` },
         ]);
       } else {
+        // Record agent code replacement as an editor event
+        eventsBufferRef.current.push({
+          ts: Date.now() - sessionStartRef.current,
+          source: "agent",
+          fullContent: data.code,
+        });
         setCode(data.code);
         codeRef.current = data.code;
         setChatMessages((prev) => [
@@ -222,9 +329,17 @@ export default function CodingChallenge() {
     }
   }
 
+  const handleExpire = useCallback(() => {
+    setExpired(true);
+    flushEditorEvents();
+  }, [flushEditorEvents]);
+
   const handleSubmit = useCallback(async () => {
     if (submitted) return;
     setSubmitted(true);
+
+    // Flush any remaining editor events before submitting
+    flushEditorEvents();
 
     if (timerRef.current) timerRef.current.stop();
 
@@ -257,7 +372,7 @@ export default function CodingChallenge() {
       setError("Network error. Please try again.");
       setSubmitted(false);
     }
-  }, [submitted, setParticipant]);
+  }, [submitted, setParticipant, flushEditorEvents]);
 
   return (
     <div className="coding-page">
@@ -266,23 +381,29 @@ export default function CodingChallenge() {
       {isTestGroup ? (
         <p>
           Use the AI assistant to implement <strong>selection sort</strong> based on
-          the visualization below. You have 8 minutes.
+          the visualization below.{timerEnabled && " You have 10 minutes."}
         </p>
       ) : (
         <p>
           Implement <strong>selection sort</strong> in JavaScript based on the
-          visualization below. You have 8 minutes.
+          visualization below.{timerEnabled && " You have 10 minutes."}
         </p>
       )}
 
-      <Timer ref={timerRef} durationSeconds={CHALLENGE_DURATION} onExpire={handleSubmit} storageKey="study_timer_start" />
+      <Timer
+        ref={timerRef}
+        durationSeconds={CHALLENGE_DURATION}
+        onExpire={timerEnabled ? handleExpire : undefined}
+        storageKey="study_timer_start"
+        hidden={!timerEnabled}
+      />
 
       <div className="editor-toolbar">
         <select
           className="language-picker"
           value={language}
           onChange={handleLanguageChange}
-          disabled={submitted}
+          disabled={expired || submitted}
         >
           {LANGUAGES.map((lang) => (
             <option key={lang.value} value={lang.value}>
@@ -293,7 +414,7 @@ export default function CodingChallenge() {
         <button
           className="btn btn-run"
           onClick={handleCheckCode}
-          disabled={checking || submitted}
+          disabled={checking || expired || submitted}
         >
           {checking ? "Checking..." : "Run"}
         </button>
@@ -321,7 +442,7 @@ export default function CodingChallenge() {
             messages={chatMessages}
             onSend={handleSendMessage}
             isLoading={agentLoading}
-            disabled={submitted}
+            disabled={expired || submitted}
           />
         </div>
       ) : (
@@ -331,6 +452,7 @@ export default function CodingChallenge() {
             language={language}
             value={code}
             onChange={(value) => {
+              if (expired) return;
               setCode(value || "");
               setCheckResult(null);
             }}
@@ -341,6 +463,7 @@ export default function CodingChallenge() {
               lineNumbers: "on",
               scrollBeyondLastLine: false,
               automaticLayout: true,
+              readOnly: expired || submitted,
             }}
           />
         </div>
@@ -354,44 +477,33 @@ export default function CodingChallenge() {
       )}
 
       <VisualizationFrame
-        ref={iframeRef}
         src={VISUALIZATION_URL}
-        onReady={handleVizReady}
+        onVizEvent={handleVizEvent}
       />
-
-      <div className="viz-controls">
-        <button
-          className="btn btn-viz-control"
-          onClick={() => iframeRef.current?.send({ type: "START", payload: { algorithm: "selection_sort" } })}
-          disabled={!vizReady || submitted}
-        >
-          Play
-        </button>
-        <button
-          className="btn btn-viz-control"
-          onClick={() => iframeRef.current?.send({ type: "RESTART" })}
-          disabled={!vizReady || submitted}
-        >
-          Restart
-        </button>
-        <button
-          className="btn btn-viz-control"
-          onClick={() => iframeRef.current?.send({ type: "RANDOMIZE" })}
-          disabled={!vizReady || submitted}
-        >
-          Randomize
-        </button>
-      </div>
 
       {error && <p className="error-message">{error}</p>}
 
-      <button
-        className="btn btn-primary"
-        onClick={handleSubmit}
-        disabled={submitted}
-      >
-        {submitted ? "Submitting..." : "Submit Code"}
-      </button>
+      {!expired && (
+        <button
+          className="btn btn-primary"
+          onClick={handleSubmit}
+          disabled={submitted}
+        >
+          {submitted ? "Submitting..." : "Submit Code"}
+        </button>
+      )}
+
+      {expired && !submitted && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Time's Up!</h3>
+            <p>Your 10 minutes have expired. Click below to continue to the next step.</p>
+            <button className="btn btn-primary" onClick={handleSubmit} disabled={submitted}>
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

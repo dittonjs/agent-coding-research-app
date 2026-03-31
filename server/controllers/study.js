@@ -14,6 +14,9 @@ import { invokeAgent } from "../agent/codingAgent.js";
 import { checkCode } from "../agent/codeChecker.js";
 import { saveCodeCheck } from "../models/codeChecks.js";
 import { saveLanguageChange } from "../models/languageChanges.js";
+import { saveEditorEvents } from "../models/editorEvents.js";
+import { saveInteractionEvents } from "../models/interactionEvents.js";
+import { getActiveStudy, getStudyById } from "../models/studies.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -34,6 +37,16 @@ async function loadParticipant(req, res, expectedStep) {
   return participant;
 }
 
+// GET /api/study/active-check
+router.get("/active-check", async (req, res) => {
+  try {
+    const study = await getActiveStudy();
+    res.json({ active: !!study });
+  } catch {
+    res.json({ active: false });
+  }
+});
+
 // POST /api/study/begin
 // Accept consent, create anonymous user + participant, set session cookie
 router.post("/begin", async (req, res) => {
@@ -46,6 +59,11 @@ router.post("/begin", async (req, res) => {
   }
 
   try {
+    const activeStudy = await getActiveStudy();
+    if (!activeStudy) {
+      return res.status(403).json({ error: "No active study is currently running. Please check back later." });
+    }
+
     const { participant, user, sessionId } = await createAnonymousParticipant();
 
     res.cookie("session_id", sessionId, {
@@ -73,7 +91,7 @@ router.post("/demographics", requireAuth, async (req, res) => {
     const participant = await loadParticipant(req, res, 2);
     if (!participant) return;
 
-    const { ageRange, gender, csYear, priorProgrammingExperience, priorAiUsage, devGroupOverride } =
+    const { ageRange, gender, csYear, priorAiUsage, ethnicity, devGroupOverride } =
       req.body;
 
     if (devGroupOverride && (devGroupOverride === "control" || devGroupOverride === "test")) {
@@ -84,8 +102,8 @@ router.post("/demographics", requireAuth, async (req, res) => {
       ageRange,
       gender,
       csYear,
-      priorProgrammingExperience,
       priorAiUsage,
+      ethnicity,
     });
 
     res.json({
@@ -387,15 +405,76 @@ router.get("/progress", async (req, res) => {
       return res.json({ participant: null });
     }
 
+    let studyConfig = {};
+    if (participant.study_id) {
+      const study = await getStudyById(participant.study_id);
+      if (study) {
+        studyConfig = { timerEnabled: study.timer_enabled };
+      }
+    }
+
     res.json({
       participant: {
         id: participant.id,
         groupAssignment: participant.group_assignment,
         currentStep: participant.current_step,
+        ...studyConfig,
       },
     });
   } catch (err) {
     console.error("Progress error:", err);
+    res.status(500).json({ error: "Server error." });
+  }
+});
+
+// POST /api/study/editor-events
+// Batch-save editor change events for playback
+router.post("/editor-events", requireAuth, async (req, res) => {
+  try {
+    const participant = await findParticipantByUserId(req.user.id);
+    if (!participant) {
+      return res.status(404).json({ error: "No participant found." });
+    }
+
+    const { events, batchSeq } = req.body;
+
+    if (!Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({ error: "No events provided." });
+    }
+
+    await saveEditorEvents(participant.id, events, batchSeq || 0);
+    res.json({ saved: events.length });
+  } catch (err) {
+    console.error("Editor events error:", err);
+    res.status(500).json({ error: "Server error." });
+  }
+});
+
+// POST /api/study/interaction-events
+// Batch-save interaction events (clicks, keystrokes, etc.)
+// Works with or without auth — uses participant_id if available, always uses sessionId
+router.post("/interaction-events", async (req, res) => {
+  try {
+    const { events, batchSeq, sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: "Session ID required." });
+    }
+
+    if (!Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({ error: "No events provided." });
+    }
+
+    let participantId = null;
+    if (req.user) {
+      const participant = await findParticipantByUserId(req.user.id);
+      if (participant) participantId = participant.id;
+    }
+
+    await saveInteractionEvents(participantId, sessionId, events, batchSeq || 0);
+    res.json({ saved: events.length });
+  } catch (err) {
+    console.error("Interaction events error:", err);
     res.status(500).json({ error: "Server error." });
   }
 });
