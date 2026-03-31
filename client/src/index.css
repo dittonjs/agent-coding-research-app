@@ -365,12 +365,33 @@ label textarea {
   position: relative;
 }
 
-.coding-page h2 {
-  margin-bottom: 0.5rem;
+.coding-sidebar {
+  position: absolute;
+  left: -220px;
+  top: 0;
+  width: 200px;
 }
 
-.coding-page p {
+.coding-sidebar h2 {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.coding-sidebar p {
   margin-bottom: 1rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.coding-main {
+  width: 100%;
+}
+
+@media (max-width: 1400px) {
+  .coding-sidebar {
+    position: static;
+    width: auto;
+  }
 }
 
 /* Editor toolbar */
@@ -441,7 +462,7 @@ label textarea {
   display: flex;
   flex-direction: column;
   background: #fff;
-  height: 500px;
+  height: 300px;
 }
 
 .chat-messages {

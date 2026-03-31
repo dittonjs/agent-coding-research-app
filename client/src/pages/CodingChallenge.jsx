@@ -382,21 +382,36 @@ export default function CodingChallenge() {
 
   return (
     <div className="coding-page">
-      <h2>Coding Challenge</h2>
+      <div className="coding-sidebar">
+        <h2>Coding Challenge</h2>
 
-      {isTestGroup ? (
-        <p>
-          Use the AI assistant to implement <strong>selection sort</strong> based on
-          the visualization below. Sort the array in place; do not return a new
-          array.{timerEnabled && " You have 10 minutes."}
-        </p>
-      ) : (
-        <p>
-          Implement <strong>selection sort</strong> based on the
-          visualization below. Sort the array in place; do not return a new
-          array.{timerEnabled && " You have 10 minutes."}
-        </p>
-      )}
+        {isTestGroup ? (
+          <p>
+            Use the AI assistant to implement <strong>selection sort</strong> based on
+            the visualization. Sort the array in place; do not return a new
+            array.{timerEnabled && " You have 10 minutes."}
+          </p>
+        ) : (
+          <p>
+            Implement <strong>selection sort</strong> based on the
+            visualization. Sort the array in place; do not return a new
+            array.{timerEnabled && " You have 10 minutes."}
+          </p>
+        )}
+
+        {!expired && (
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowConfirm(true)}
+            disabled={submitted}
+            style={{ marginTop: "1rem" }}
+          >
+            {submitted ? "Submitting..." : "Submit Code"}
+          </button>
+        )}
+
+        {error && <p className="error-message">{error}</p>}
+      </div>
 
       <Timer
         ref={timerRef}
@@ -406,6 +421,7 @@ export default function CodingChallenge() {
         hidden={!timerEnabled}
       />
 
+      <div className="coding-main">
       <div className="editor-toolbar">
         <select
           className="language-picker"
@@ -432,7 +448,7 @@ export default function CodingChallenge() {
         <div className="editor-chat-container">
           <div className="editor-container">
             <Editor
-              height="500px"
+              height="300px"
               language={language}
               value={code}
               onMount={handleEditorMount}
@@ -457,7 +473,7 @@ export default function CodingChallenge() {
       ) : (
         <div className="editor-container">
           <Editor
-            height="500px"
+            height="300px"
             language={language}
             value={code}
             onChange={(value) => {
@@ -491,17 +507,7 @@ export default function CodingChallenge() {
         onVizEvent={handleVizEvent}
       />
 
-      {error && <p className="error-message">{error}</p>}
-
-      {!expired && (
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowConfirm(true)}
-          disabled={submitted}
-        >
-          {submitted ? "Submitting..." : "Submit Code"}
-        </button>
-      )}
+      </div>
 
       {showConfirm && !expired && (
         <Modal title="Ready to submit?">

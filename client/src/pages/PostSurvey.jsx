@@ -56,6 +56,11 @@ const SHARED_QUESTIONS = [
     ],
   },
   {
+    key: "usedVisualization",
+    type: "likert",
+    label: "I used the visualization to help me understand the algorithm.",
+  },
+  {
     key: "strategy",
     type: "text",
     label: "What strategy did you use to complete the challenge?",
@@ -68,6 +73,11 @@ const SHARED_QUESTIONS = [
 ];
 
 const TEST_GROUP_QUESTIONS = [
+  {
+    key: "lookedAtCode",
+    type: "likert",
+    label: "I looked at the code the AI wrote to understand what it was doing.",
+  },
   {
     key: "aiHelpful",
     type: "likert",
