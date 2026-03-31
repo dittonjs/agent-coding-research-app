@@ -4,6 +4,7 @@ import { useStudy } from "../hooks/useStudy";
 import Timer from "../components/Timer";
 import VisualizationFrame from "../components/VisualizationFrame";
 import ChatPanel from "../components/ChatPanel";
+import Modal from "../components/Modal";
 
 const CHALLENGE_DURATION = 600; // 10 minutes
 const VISUALIZATION_URL = "https://sulovebhattarai.github.io/selection_sort_animation/";
@@ -20,19 +21,14 @@ const LANGUAGES = [
 const STARTER_CODE = {
   javascript: `function selectionSort(arr) {
   // Your implementation here
-
-  return arr;
 }
 `,
   python: `def selection_sort(arr):
     # Your implementation here
-
-    return arr
+    pass
 `,
-  java: `public static int[] selectionSort(int[] arr) {
+  java: `public static void selectionSort(int[] arr) {
     // Your implementation here
-
-    return arr;
 }
 `,
   c: `void selectionSort(int arr[], int n) {
@@ -43,10 +39,8 @@ const STARTER_CODE = {
     // Your implementation here
 }
 `,
-  csharp: `public static int[] SelectionSort(int[] arr) {
+  csharp: `public static void SelectionSort(int[] arr) {
     // Your implementation here
-
-    return arr;
 }
 `,
 };
@@ -67,6 +61,7 @@ export default function CodingChallenge() {
   const [language, setLanguage] = useState(savedLang);
   const [code, setCode] = useState(savedCode);
   const [submitted, setSubmitted] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const [agentLoading, setAgentLoading] = useState(false);
@@ -128,6 +123,17 @@ export default function CodingChallenge() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ events, batchSeq: seq }),
     }).catch(() => {});
+  }, []);
+
+  // Prevent Ctrl+S from opening the browser save dialog
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, []);
 
   // Flush on an interval and on unmount
@@ -381,12 +387,14 @@ export default function CodingChallenge() {
       {isTestGroup ? (
         <p>
           Use the AI assistant to implement <strong>selection sort</strong> based on
-          the visualization below.{timerEnabled && " You have 10 minutes."}
+          the visualization below. Sort the array in place; do not return a new
+          array.{timerEnabled && " You have 10 minutes."}
         </p>
       ) : (
         <p>
-          Implement <strong>selection sort</strong> in JavaScript based on the
-          visualization below.{timerEnabled && " You have 10 minutes."}
+          Implement <strong>selection sort</strong> based on the
+          visualization below. Sort the array in place; do not return a new
+          array.{timerEnabled && " You have 10 minutes."}
         </p>
       )}
 
@@ -435,6 +443,7 @@ export default function CodingChallenge() {
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
                 readOnly: true,
+                tabSize: 4,
               }}
             />
           </div>
@@ -464,6 +473,7 @@ export default function CodingChallenge() {
               scrollBeyondLastLine: false,
               automaticLayout: true,
               readOnly: expired || submitted,
+              tabSize: 4,
             }}
           />
         </div>
@@ -486,23 +496,42 @@ export default function CodingChallenge() {
       {!expired && (
         <button
           className="btn btn-primary"
-          onClick={handleSubmit}
+          onClick={() => setShowConfirm(true)}
           disabled={submitted}
         >
           {submitted ? "Submitting..." : "Submit Code"}
         </button>
       )}
 
-      {expired && !submitted && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Time's Up!</h3>
-            <p>Your 10 minutes have expired. Click below to continue to the next step.</p>
-            <button className="btn btn-primary" onClick={handleSubmit} disabled={submitted}>
-              Continue
+      {showConfirm && !expired && (
+        <Modal title="Ready to submit?">
+          <p>Submit your code and move on to the post-test?</p>
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+            <button
+              className="btn"
+              onClick={() => setShowConfirm(false)}
+              disabled={submitted}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => { setShowConfirm(false); handleSubmit(); }}
+              disabled={submitted}
+            >
+              {submitted ? "Submitting..." : "Submit"}
             </button>
           </div>
-        </div>
+        </Modal>
+      )}
+
+      {expired && !submitted && (
+        <Modal title="Time's Up!">
+          <p>Your 10 minutes have expired. Click below to continue to the next step.</p>
+          <button className="btn btn-primary" onClick={handleSubmit} disabled={submitted}>
+            Continue
+          </button>
+        </Modal>
       )}
     </div>
   );

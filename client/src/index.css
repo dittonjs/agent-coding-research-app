@@ -23,19 +23,23 @@ body {
 .study-header {
   background-color: #333;
   color: #fff;
-  padding: 1rem 2rem;
-  text-align: center;
+  padding: 0.4rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
 }
 
 .study-title {
-  font-size: 1.25rem;
-  margin-bottom: 0.75rem;
+  font-size: 1rem;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .progress-bar {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 0.25rem;
+  flex: 1;
 }
 
 .progress-step {
@@ -202,12 +206,14 @@ label textarea {
 
 /* Timer */
 .timer {
-  font-size: 2rem;
+  font-size: 1.25rem;
   font-weight: bold;
   font-variant-numeric: tabular-nums;
-  text-align: center;
-  padding: 0.5rem;
-  margin: 0.5rem 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.25rem 0.5rem;
+  margin: 0;
 }
 
 .timer-low {
@@ -335,7 +341,7 @@ label textarea {
 /* Visualization iframe */
 .visualization-iframe {
   width: 100%;
-  height: 400px;
+  height: 430px;
   border: 1px solid #ddd;
   border-radius: 6px;
   margin-bottom: 1rem;
@@ -355,6 +361,10 @@ label textarea {
 }
 
 /* Coding challenge page */
+.coding-page {
+  position: relative;
+}
+
 .coding-page h2 {
   margin-bottom: 0.5rem;
 }
