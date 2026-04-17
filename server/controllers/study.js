@@ -11,8 +11,6 @@ import { saveCodeSubmission } from "../models/codeSubmissions.js";
 import { saveSurveyResponse } from "../models/surveyResponses.js";
 import { saveChatMessage, getChatHistory, getChatMessageCount } from "../models/chatMessages.js";
 import { invokeAgent } from "../agent/codingAgent.js";
-import { checkCode } from "../agent/codeChecker.js";
-import { saveCodeCheck } from "../models/codeChecks.js";
 import { saveLanguageChange } from "../models/languageChanges.js";
 import { saveEditorEvents } from "../models/editorEvents.js";
 import { saveInteractionEvents } from "../models/interactionEvents.js";
@@ -176,12 +174,13 @@ router.post("/code-submission", requireAuth, async (req, res) => {
     const participant = await loadParticipant(req, res, 5);
     if (!participant) return;
 
-    const { code, durationMs } = req.body;
+    const { code, durationMs, gaveUp } = req.body;
 
     const submission = await saveCodeSubmission(
       participant.id,
       code || "",
-      durationMs
+      durationMs,
+      !!gaveUp
     );
 
     const updated = await updateStep(participant.id, 6);
@@ -358,37 +357,6 @@ router.post("/language-change", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Language change error:", err);
     res.status(500).json({ error: "Server error." });
-  }
-});
-
-// POST /api/study/check-code
-router.post("/check-code", requireAuth, async (req, res) => {
-  try {
-    const participant = await findParticipantByUserId(req.user.id);
-    if (!participant || participant.current_step !== 5) {
-      return res.status(400).json({ error: "Check only available during coding challenge." });
-    }
-
-    const { code, language } = req.body;
-
-    if (!code || typeof code !== "string") {
-      return res.status(400).json({ error: "Code is required." });
-    }
-
-    const lang = language || "javascript";
-    const result = await checkCode(code, lang);
-
-    await saveCodeCheck(participant.id, code, lang, result.correct, result.message);
-
-    res.json({
-      correct: result.correct,
-      message: result.correct
-        ? "Your implementation is correct!"
-        : "Your implementation is not quite right. Keep trying!",
-    });
-  } catch (err) {
-    console.error("Check code error:", err);
-    res.status(500).json({ error: "Unable to check code. Please try again." });
   }
 });
 

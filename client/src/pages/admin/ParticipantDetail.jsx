@@ -60,7 +60,7 @@ export default function ParticipantDetail() {
 
         {detail.codeSubmission && (
           <div className="detail-section">
-            <h4>Code Submission</h4>
+            <h4>Code Submission{detail.codeSubmission.gave_up ? " (gave up)" : ""}</h4>
             <p>Duration: {detail.codeSubmission.duration_ms ? `${(detail.codeSubmission.duration_ms / 1000).toFixed(1)}s` : "\u2014"}</p>
             <pre className="code-block">{detail.codeSubmission.code}</pre>
           </div>
@@ -86,21 +86,6 @@ export default function ParticipantDetail() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {detail.codeChecks?.length > 0 && (
-          <div className="detail-section">
-            <h4>Code Checks ({detail.codeChecks.length})</h4>
-            {detail.codeChecks.map((c) => (
-              <div key={c.id} style={{ marginBottom: "1rem" }}>
-                <strong>{c.correct ? "Correct" : "Incorrect"}</strong>
-                {" \u2014 "}{c.language} {" \u2014 "} {new Date(c.created_at).toLocaleTimeString()}
-                <br />
-                <em>{c.agent_message}</em>
-                <pre className="code-block">{c.code}</pre>
-              </div>
-            ))}
           </div>
         )}
 

@@ -410,38 +410,6 @@ label textarea {
   background: #fff;
 }
 
-.btn-run {
-  background-color: #5cb85c;
-  color: #fff;
-  padding: 0.35rem 1rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.btn-run:hover:not(:disabled) {
-  background-color: #4cae4c;
-}
-
-/* Check result */
-.check-result {
-  padding: 0.6rem 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-}
-
-.check-pass {
-  background: #eaf7ea;
-  border: 1px solid #5cb85c;
-  color: #3c763d;
-}
-
-.check-fail {
-  background: #fdf2f2;
-  border: 1px solid #d9534f;
-  color: #a94442;
-}
-
 /* Editor + Chat layout */
 .editor-chat-container {
   display: flex;

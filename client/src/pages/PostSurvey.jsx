@@ -36,16 +36,6 @@ const SHARED_QUESTIONS = [
     label: "I felt engaged during the task.",
   },
   {
-    key: "timeAdequate",
-    type: "select",
-    label: "Did you feel the time limit was adequate?",
-    options: [
-      { value: "yes", label: "Yes" },
-      { value: "no", label: "No" },
-      { value: "unsure", label: "Unsure" },
-    ],
-  },
-  {
     key: "priorSelectionSort",
     type: "select",
     label: "Had you implemented selection sort before this study?",

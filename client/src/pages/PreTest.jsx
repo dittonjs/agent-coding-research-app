@@ -1,13 +1,13 @@
 import SortingTest from "../components/SortingTest";
-import { PRE_TEST_ARRAY } from "../utils/selectionSort";
+import { PRE_TEST_ARRAYS } from "../utils/selectionSort";
 
 export default function PreTest() {
   return (
     <SortingTest
       title="Pre-Test"
-      description="Below is an array of numbers. Perform selection sort by filling in the state of the array after each swap."
+      description="For each array below, perform selection sort by selecting two numbers at a time to swap them."
       endpoint="/api/study/pre-test"
-      initialArray={PRE_TEST_ARRAY}
+      initialArrays={PRE_TEST_ARRAYS}
       showIDontKnow
     />
   );

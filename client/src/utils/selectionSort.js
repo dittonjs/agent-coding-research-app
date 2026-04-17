@@ -1,6 +1,20 @@
-// Hard-coded test arrays
-export const PRE_TEST_ARRAY = [38, 12, 45, 7, 29, 53, 16, 42];
-export const POST_TEST_ARRAY = [33, 15, 46, 12, 28, 44, 37, 19];
+// Each test is multiple short sorting questions (values 1-5, length 5).
+// Every array below requires >=3 swaps under selection sort.
+export const PRE_TEST_ARRAYS = [
+  [3, 1, 4, 2, 5],
+  [5, 1, 2, 3, 4],
+  [2, 3, 4, 5, 1],
+  [2, 4, 1, 5, 3],
+  [3, 4, 5, 1, 2],
+];
+
+export const POST_TEST_ARRAYS = [
+  [4, 1, 5, 2, 3],
+  [4, 5, 1, 3, 2],
+  [5, 3, 4, 1, 2],
+  [2, 5, 1, 4, 3],
+  [3, 5, 4, 1, 2],
+];
 
 /**
  * Compute the array state after each swap in selection sort.

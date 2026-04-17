@@ -1,13 +1,13 @@
 import SortingTest from "../components/SortingTest";
-import { POST_TEST_ARRAY } from "../utils/selectionSort";
+import { POST_TEST_ARRAYS } from "../utils/selectionSort";
 
 export default function PostTest() {
   return (
     <SortingTest
       title="Post-Test"
-      description="Below is an array of numbers. Perform selection sort by filling in the state of the array after each swap."
+      description="For each array below, perform selection sort by selecting two numbers at a time to swap them."
       endpoint="/api/study/post-test"
-      initialArray={POST_TEST_ARRAY}
+      initialArrays={POST_TEST_ARRAYS}
     />
   );
 }

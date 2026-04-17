@@ -1,11 +1,11 @@
 import pool from "../db/connection.js";
 
-export async function saveCodeSubmission(participantId, code, durationMs) {
+export async function saveCodeSubmission(participantId, code, durationMs, gaveUp = false) {
   const result = await pool.query(
-    `INSERT INTO code_submissions (participant_id, code, duration_ms)
-     VALUES ($1, $2, $3)
+    `INSERT INTO code_submissions (participant_id, code, duration_ms, gave_up)
+     VALUES ($1, $2, $3, $4)
      RETURNING *`,
-    [participantId, code, durationMs]
+    [participantId, code, durationMs, gaveUp]
   );
   return result.rows[0];
 }

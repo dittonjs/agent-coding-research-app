@@ -5,7 +5,6 @@ try {
   await pool.query("DELETE FROM interaction_events");
   await pool.query("DELETE FROM editor_events");
   await pool.query("DELETE FROM language_changes");
-  await pool.query("DELETE FROM code_checks");
   await pool.query("DELETE FROM chat_messages");
   await pool.query("DELETE FROM survey_responses");
   await pool.query("DELETE FROM code_submissions");

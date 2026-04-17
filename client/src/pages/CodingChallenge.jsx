@@ -1,12 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import { useStudy } from "../hooks/useStudy";
-import Timer from "../components/Timer";
 import VisualizationFrame from "../components/VisualizationFrame";
 import ChatPanel from "../components/ChatPanel";
 import Modal from "../components/Modal";
 
-const CHALLENGE_DURATION = 600; // 10 minutes
 const VISUALIZATION_URL = "https://sulovebhattarai.github.io/selection_sort_animation/";
 
 const LANGUAGES = [
@@ -61,14 +59,10 @@ export default function CodingChallenge() {
   const [language, setLanguage] = useState(savedLang);
   const [code, setCode] = useState(savedCode);
   const [submitted, setSubmitted] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmKind, setConfirmKind] = useState(null); // "submit" | "giveUp" | null
   const [error, setError] = useState("");
   const [chatMessages, setChatMessages] = useState([]);
   const [agentLoading, setAgentLoading] = useState(false);
-  const [checkResult, setCheckResult] = useState(null);
-  const [checking, setChecking] = useState(false);
-  const [expired, setExpired] = useState(false);
-  const timerRef = useRef(null);
   const editorRef = useRef(null);
   const codeRef = useRef(code);
 
@@ -78,11 +72,11 @@ export default function CodingChallenge() {
   const flushTimerRef = useRef(null);
   const sessionStartRef = useRef(Date.now());
   const pastedRef = useRef(false);
+  const programmaticChangeRef = useRef(false);
 
   codeRef.current = code;
 
   const isTestGroup = participant?.groupAssignment === "test";
-  const timerEnabled = participant?.timerEnabled !== false;
 
   // Persist code and language to localStorage
   useEffect(() => {
@@ -192,6 +186,13 @@ export default function CodingChallenge() {
     });
 
     editor.onDidChangeModelContent((e) => {
+      // Skip changes triggered by programmatic setCode (agent/language change)
+      // — those are already recorded by their own source-specific event.
+      if (programmaticChangeRef.current) {
+        programmaticChangeRef.current = false;
+        return;
+      }
+
       let source = classifySource(e.changes);
       if (e.isUndoing) source = "undo";
       if (e.isRedoing) source = "redo";
@@ -241,9 +242,9 @@ export default function CodingChallenge() {
 
     setLanguage(newLang);
     const newCode = STARTER_CODE[newLang];
+    programmaticChangeRef.current = true;
     setCode(newCode);
     codeRef.current = newCode;
-    setCheckResult(null);
   }
 
   function getSelection() {
@@ -293,6 +294,7 @@ export default function CodingChallenge() {
           source: "agent",
           fullContent: data.code,
         });
+        programmaticChangeRef.current = true;
         setCode(data.code);
         codeRef.current = data.code;
         setChatMessages((prev) => [
@@ -310,46 +312,13 @@ export default function CodingChallenge() {
     }
   }
 
-  async function handleCheckCode() {
-    setChecking(true);
-    setCheckResult(null);
-
-    try {
-      const res = await fetch("/api/study/check-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: codeRef.current, language }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setCheckResult({ correct: false, message: data.error || "Check failed." });
-      } else {
-        setCheckResult(data);
-      }
-    } catch {
-      setCheckResult({ correct: false, message: "Network error. Please try again." });
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  const handleExpire = useCallback(() => {
-    setExpired(true);
-    flushEditorEvents();
-  }, [flushEditorEvents]);
-
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(async (gaveUp = false) => {
     if (submitted) return;
     setSubmitted(true);
 
-    // Flush any remaining editor events before submitting
     flushEditorEvents();
 
-    if (timerRef.current) timerRef.current.stop();
-
-    const elapsed = timerRef.current?.getElapsedMs?.() || CHALLENGE_DURATION * 1000;
+    const elapsed = Date.now() - sessionStartRef.current;
 
     try {
       const res = await fetch("/api/study/code-submission", {
@@ -358,6 +327,7 @@ export default function CodingChallenge() {
         body: JSON.stringify({
           code: codeRef.current,
           durationMs: elapsed,
+          gaveUp,
         }),
       });
 
@@ -369,10 +339,8 @@ export default function CodingChallenge() {
         return;
       }
 
-      // Clean up localStorage on successful submit
       localStorage.removeItem("study_code");
       localStorage.removeItem("study_language");
-      localStorage.removeItem("study_timer_start");
       setParticipant(data.participant);
     } catch {
       setError("Network error. Please try again.");
@@ -389,37 +357,35 @@ export default function CodingChallenge() {
           <p>
             Use the AI assistant to implement <strong>selection sort</strong> based on
             the visualization. Sort the array in place; do not return a new
-            array.{timerEnabled && " You have 10 minutes."}
+            array. When you believe you have a correct solution, click Submit to move on.
           </p>
         ) : (
           <p>
             Implement <strong>selection sort</strong> based on the
             visualization. Sort the array in place; do not return a new
-            array.{timerEnabled && " You have 10 minutes."}
+            array. When you believe you have a correct solution, click Submit to move on.
           </p>
         )}
 
-        {!expired && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "1rem" }}>
           <button
             className="btn btn-primary"
-            onClick={() => setShowConfirm(true)}
+            onClick={() => setConfirmKind("submit")}
             disabled={submitted}
-            style={{ marginTop: "1rem" }}
           >
             {submitted ? "Submitting..." : "Submit Code"}
           </button>
-        )}
+          <button
+            className="btn btn-secondary"
+            onClick={() => setConfirmKind("giveUp")}
+            disabled={submitted}
+          >
+            I give up
+          </button>
+        </div>
 
         {error && <p className="error-message">{error}</p>}
       </div>
-
-      <Timer
-        ref={timerRef}
-        durationSeconds={CHALLENGE_DURATION}
-        onExpire={timerEnabled ? handleExpire : undefined}
-        storageKey="study_timer_start"
-        hidden={!timerEnabled}
-      />
 
       <div className="coding-main">
       <div className="editor-toolbar">
@@ -427,7 +393,7 @@ export default function CodingChallenge() {
           className="language-picker"
           value={language}
           onChange={handleLanguageChange}
-          disabled={expired || submitted}
+          disabled={submitted}
         >
           {LANGUAGES.map((lang) => (
             <option key={lang.value} value={lang.value}>
@@ -435,13 +401,6 @@ export default function CodingChallenge() {
             </option>
           ))}
         </select>
-        <button
-          className="btn btn-run"
-          onClick={handleCheckCode}
-          disabled={checking || expired || submitted}
-        >
-          {checking ? "Checking..." : "Run"}
-        </button>
       </div>
 
       {isTestGroup ? (
@@ -467,7 +426,7 @@ export default function CodingChallenge() {
             messages={chatMessages}
             onSend={handleSendMessage}
             isLoading={agentLoading}
-            disabled={expired || submitted}
+            disabled={submitted}
           />
         </div>
       ) : (
@@ -477,9 +436,7 @@ export default function CodingChallenge() {
             language={language}
             value={code}
             onChange={(value) => {
-              if (expired) return;
               setCode(value || "");
-              setCheckResult(null);
             }}
             onMount={handleEditorMount}
             options={{
@@ -488,17 +445,10 @@ export default function CodingChallenge() {
               lineNumbers: "on",
               scrollBeyondLastLine: false,
               automaticLayout: true,
-              readOnly: expired || submitted,
+              readOnly: submitted,
               tabSize: 4,
             }}
           />
-        </div>
-      )}
-
-      {checkResult && (
-        <div className={`check-result ${checkResult.correct ? "check-pass" : "check-fail"}`}>
-          <strong>{checkResult.correct ? "Pass" : "Not quite"}:</strong>{" "}
-          {checkResult.message}
         </div>
       )}
 
@@ -509,34 +459,33 @@ export default function CodingChallenge() {
 
       </div>
 
-      {showConfirm && !expired && (
-        <Modal title="Ready to submit?">
-          <p>Submit your code and move on to the post-test?</p>
+      {confirmKind && (
+        <Modal title={confirmKind === "giveUp" ? "Give up?" : "Ready to submit?"}>
+          <p>
+            {confirmKind === "giveUp"
+              ? "Move on to the post-test without a working solution?"
+              : "Submit your code and move on to the post-test?"}
+          </p>
           <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
             <button
               className="btn"
-              onClick={() => setShowConfirm(false)}
+              onClick={() => setConfirmKind(null)}
               disabled={submitted}
             >
               Cancel
             </button>
             <button
               className="btn btn-primary"
-              onClick={() => { setShowConfirm(false); handleSubmit(); }}
+              onClick={() => {
+                const kind = confirmKind;
+                setConfirmKind(null);
+                handleSubmit(kind === "giveUp");
+              }}
               disabled={submitted}
             >
-              {submitted ? "Submitting..." : "Submit"}
+              {submitted ? "Submitting..." : confirmKind === "giveUp" ? "I give up" : "Submit"}
             </button>
           </div>
-        </Modal>
-      )}
-
-      {expired && !submitted && (
-        <Modal title="Time's Up!">
-          <p>Your 10 minutes have expired. Click below to continue to the next step.</p>
-          <button className="btn btn-primary" onClick={handleSubmit} disabled={submitted}>
-            Continue
-          </button>
         </Modal>
       )}
     </div>

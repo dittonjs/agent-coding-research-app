@@ -185,11 +185,6 @@ router.get("/participants/:id", requireAdmin, async (req, res) => {
       [id]
     );
 
-    const codeChecks = await pool.query(
-      "SELECT * FROM code_checks WHERE participant_id = $1 ORDER BY created_at ASC",
-      [id]
-    );
-
     const editorEvents = await pool.query(
       "SELECT * FROM editor_events WHERE participant_id = $1 ORDER BY batch_seq ASC",
       [id]
@@ -201,7 +196,6 @@ router.get("/participants/:id", requireAdmin, async (req, res) => {
       codeSubmission: codeSubmission.rows[0] || null,
       surveyResponses: surveyResponses.rows,
       chatMessages: chatMessages.rows,
-      codeChecks: codeChecks.rows,
       editorEvents: editorEvents.rows,
     });
   } catch (err) {
@@ -256,13 +250,12 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
     }
 
     // Fetch all related data
-    const [testResults, codeSubmissions, surveyResponses, chatMessages, codeChecks, editorEvents, interactionEvents] =
+    const [testResults, codeSubmissions, surveyResponses, chatMessages, editorEvents, interactionEvents] =
       await Promise.all([
         pool.query("SELECT * FROM test_results WHERE participant_id = ANY($1) ORDER BY participant_id, test_type", [pIds]),
         pool.query("SELECT * FROM code_submissions WHERE participant_id = ANY($1) ORDER BY participant_id", [pIds]),
         pool.query("SELECT * FROM survey_responses WHERE participant_id = ANY($1) ORDER BY participant_id", [pIds]),
         pool.query("SELECT * FROM chat_messages WHERE participant_id = ANY($1) ORDER BY participant_id, created_at", [pIds]),
-        pool.query("SELECT * FROM code_checks WHERE participant_id = ANY($1) ORDER BY participant_id, created_at", [pIds]),
         pool.query("SELECT * FROM editor_events WHERE participant_id = ANY($1) ORDER BY participant_id, batch_seq", [pIds]),
         pool.query("SELECT * FROM interaction_events WHERE participant_id = ANY($1) ORDER BY participant_id, batch_seq", [pIds]),
       ]);
@@ -300,7 +293,7 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
       "age_range", "gender", "ethnicity", "cs_year", "prior_ai_usage",
       "pre_test_score", "pre_test_total", "pre_test_duration_ms", "pre_test_skipped",
       "post_test_score", "post_test_total", "post_test_duration_ms", "post_test_skipped",
-      "code_submission_duration_ms", "code_submitted",
+      "code_submission_duration_ms", "code_submitted", "code_gave_up",
       ...sortedSurveyKeys.map((k) => `survey_${k}`),
       "created_at",
     ];
@@ -317,7 +310,7 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
         pre?.results?.durationMs ?? "", pre?.results?.skipped ?? "",
         post?.results?.correctCount ?? "", post?.results?.totalSteps ?? "",
         post?.results?.durationMs ?? "", post?.results?.skipped ?? "",
-        sub?.duration_ms ?? "", sub ? "yes" : "no",
+        sub?.duration_ms ?? "", sub ? "yes" : "no", sub?.gave_up ? "yes" : "no",
         ...sortedSurveyKeys.map((k) => survey?.responses?.[k] ?? ""),
         p.created_at,
       ];

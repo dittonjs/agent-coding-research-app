@@ -2,25 +2,42 @@ import { useState, useRef } from "react";
 import { useStudy } from "../hooks/useStudy";
 import { selectionSortSteps, checkStep } from "../utils/selectionSort";
 
-export default function SortingTest({ title, description, endpoint, initialArray, showIDontKnow }) {
+export default function SortingTest({ title, description, endpoint, initialArrays, showIDontKnow }) {
   const { setParticipant } = useStudy();
-  const expectedSteps = selectionSortSteps(initialArray);
   const startTimeRef = useRef(Date.now());
 
-  // History of array states: starts with the initial array
-  const [history, setHistory] = useState([[...initialArray]]);
-  // Which indices are selected for swapping (0, 1, or 2 selected)
+  // Per-question expected steps, computed once
+  const expectedStepsByQuestion = useRef(
+    initialArrays.map((arr) => selectionSortSteps(arr))
+  ).current;
+
+  // One history per question; each starts with the initial array
+  const [histories, setHistories] = useState(
+    initialArrays.map((arr) => [[...arr]])
+  );
+  const [questionIndex, setQuestionIndex] = useState(0);
   const [selected, setSelected] = useState([]);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
+  const initialArray = initialArrays[questionIndex];
+  const history = histories[questionIndex];
   const currentArray = history[history.length - 1];
-  const currentStepIndex = history.length - 1; // 0 = initial, 1 = after swap 1, etc.
+  const currentStepIndex = history.length - 1;
+  const isLastQuestion = questionIndex === initialArrays.length - 1;
+
+  function updateCurrentHistory(newHistory) {
+    setHistories((prev) => {
+      const copy = [...prev];
+      copy[questionIndex] = newHistory;
+      return copy;
+    });
+  }
+
   function handleBoxClick(index) {
     if (submitted) return;
 
     if (selected.includes(index)) {
-      // Deselect if clicking the same box
       setSelected(selected.filter((i) => i !== index));
       return;
     }
@@ -28,18 +45,22 @@ export default function SortingTest({ title, description, endpoint, initialArray
     if (selected.length === 0) {
       setSelected([index]);
     } else if (selected.length === 1) {
-      // Two selected — perform the swap
       const newArray = [...currentArray];
       const [first] = selected;
       [newArray[first], newArray[index]] = [newArray[index], newArray[first]];
-      setHistory([...history, newArray]);
+      updateCurrentHistory([...history, newArray]);
       setSelected([]);
     }
   }
 
   function handleUndo() {
     if (history.length <= 1 || submitted) return;
-    setHistory(history.slice(0, -1));
+    updateCurrentHistory(history.slice(0, -1));
+    setSelected([]);
+  }
+
+  function handleNext() {
+    setQuestionIndex(questionIndex + 1);
     setSelected([]);
   }
 
@@ -53,45 +74,62 @@ export default function SortingTest({ title, description, endpoint, initialArray
 
     if (skipped) {
       results = {
-        initialArray,
-        totalSteps: expectedSteps.length,
+        questions: initialArrays.map((arr) => ({
+          initialArray: arr,
+          totalSteps: selectionSortSteps(arr).length,
+          correctCount: 0,
+          incorrectCount: 0,
+          steps: [],
+        })),
+        totalSteps: expectedStepsByQuestion.reduce((n, s) => n + s.length, 0),
         correctCount: 0,
         incorrectCount: 0,
         durationMs,
         skipped: true,
-        steps: [],
       };
     } else {
-      // Score against the expected selection sort steps
-      const scoredSteps = expectedSteps.map((expected, stepIdx) => {
-        const studentAnswer = history[stepIdx + 1] || [];
-        const correct = checkStep(expected, studentAnswer);
+      const perQuestion = initialArrays.map((arr, qIdx) => {
+        const expectedSteps = expectedStepsByQuestion[qIdx];
+        const qHistory = histories[qIdx];
+
+        const scoredSteps = expectedSteps.map((expected, stepIdx) => {
+          const studentAnswer = qHistory[stepIdx + 1] || [];
+          const correct = checkStep(expected, studentAnswer);
+          return {
+            step: stepIdx + 1,
+            expected,
+            studentAnswer,
+            correct,
+          };
+        });
+
+        const qCorrect = scoredSteps.filter((s) => s.correct).length;
+        const allSwaps = qHistory.slice(1).map((state, idx) => ({
+          swap: idx + 1,
+          arrayState: state,
+        }));
+
         return {
-          step: stepIdx + 1,
-          expected,
-          studentAnswer,
-          correct,
+          initialArray: arr,
+          totalSteps: expectedSteps.length,
+          correctCount: qCorrect,
+          incorrectCount: expectedSteps.length - qCorrect,
+          steps: scoredSteps,
+          allSwaps,
+          totalSwapsPerformed: allSwaps.length,
         };
       });
 
-      const correctCount = scoredSteps.filter((s) => s.correct).length;
-
-      // Save all swaps the user performed (for admin dashboard)
-      const allSwaps = history.slice(1).map((state, idx) => ({
-        swap: idx + 1,
-        arrayState: state,
-      }));
+      const totalSteps = perQuestion.reduce((n, q) => n + q.totalSteps, 0);
+      const correctCount = perQuestion.reduce((n, q) => n + q.correctCount, 0);
 
       results = {
-        initialArray,
-        totalSteps: expectedSteps.length,
+        questions: perQuestion,
+        totalSteps,
         correctCount,
-        incorrectCount: expectedSteps.length - correctCount,
+        incorrectCount: totalSteps - correctCount,
         durationMs,
         skipped: false,
-        steps: scoredSteps,
-        allSwaps,
-        totalSwapsPerformed: allSwaps.length,
       };
     }
 
@@ -122,11 +160,10 @@ export default function SortingTest({ title, description, endpoint, initialArray
       <h2>{title}</h2>
       <p>{description}</p>
       <p className="sort-instructions">
-        Select two numbers to swap them. Submit when you believe the array is sorted.
+        Question {questionIndex + 1} of {initialArrays.length}. Select two numbers to swap them.
       </p>
 
       <div className="sort-exercise">
-        {/* Show completed steps as read-only rows */}
         {history.length > 1 && (
           <div className="sort-row">
             <span className="sort-row-label">Initial:</span>
@@ -149,7 +186,6 @@ export default function SortingTest({ title, description, endpoint, initialArray
           </div>
         ))}
 
-        {/* Current interactive row */}
         <div className="sort-row">
           <span className="sort-row-label">
             {currentStepIndex === 0 ? "Initial:" : `Swap ${currentStepIndex}:`}
@@ -175,7 +211,6 @@ export default function SortingTest({ title, description, endpoint, initialArray
           </div>
         </div>
 
-        {/* Step counter */}
         <p className="sort-step-counter">
           {currentStepIndex === 0
             ? "Select 2 numbers to swap"
@@ -187,15 +222,21 @@ export default function SortingTest({ title, description, endpoint, initialArray
 
       {!submitted && (
         <div className="test-submit-actions">
-          <button className="btn btn-primary" onClick={() => submitResults(false)}>
-            Submit Answers
-          </button>
+          {isLastQuestion ? (
+            <button className="btn btn-primary" onClick={() => submitResults(false)}>
+              Submit Answers
+            </button>
+          ) : (
+            <button className="btn btn-primary" onClick={handleNext}>
+              Next Question
+            </button>
+          )}
           {history.length > 1 && (
             <button className="btn btn-secondary" onClick={handleUndo}>
               Undo Last Swap
             </button>
           )}
-          {showIDontKnow && (
+          {showIDontKnow && questionIndex === 0 && history.length === 1 && (
             <button className="btn btn-secondary" onClick={() => submitResults(true)}>
               I don't know selection sort
             </button>
