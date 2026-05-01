@@ -3,7 +3,6 @@ import {
   createAnonymousParticipant,
   findParticipantByUserId,
   updateDemographics,
-  updateGroupAssignment,
   updateStep,
 } from "../models/participants.js";
 import { saveTestResult } from "../models/testResults.js";
@@ -48,7 +47,7 @@ router.get("/active-check", async (req, res) => {
 // POST /api/study/begin
 // Accept consent, create anonymous user + participant, set session cookie
 router.post("/begin", async (req, res) => {
-  const { consentAccepted } = req.body;
+  const { consentAccepted, forceGroup } = req.body;
 
   if (!consentAccepted) {
     return res
@@ -62,7 +61,7 @@ router.post("/begin", async (req, res) => {
       return res.status(403).json({ error: "No active study is currently running. Please check back later." });
     }
 
-    const { participant, user, sessionId } = await createAnonymousParticipant();
+    const { participant, user, sessionId } = await createAnonymousParticipant(forceGroup);
 
     res.cookie("session_id", sessionId, {
       httpOnly: true,
@@ -89,12 +88,7 @@ router.post("/demographics", requireAuth, async (req, res) => {
     const participant = await loadParticipant(req, res, 2);
     if (!participant) return;
 
-    const { ageRange, gender, csYear, priorAiUsage, ethnicity, devGroupOverride } =
-      req.body;
-
-    if (devGroupOverride && (devGroupOverride === "control" || devGroupOverride === "test")) {
-      await updateGroupAssignment(participant.id, devGroupOverride);
-    }
+    const { ageRange, gender, csYear, priorAiUsage, ethnicity } = req.body;
 
     const updated = await updateDemographics(participant.id, {
       ageRange,

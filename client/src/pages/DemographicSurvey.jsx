@@ -150,17 +150,6 @@ export default function DemographicSurvey() {
           </select>
         </label>
 
-        {import.meta.env.DEV && (
-          <label>
-            Dev: Group Assignment
-            <select name="devGroupOverride" value={form.devGroupOverride || ""} onChange={handleChange}>
-              <option value="">Random</option>
-              <option value="control">Control</option>
-              <option value="test">Test</option>
-            </select>
-          </label>
-        )}
-
         {error && <p className="error-message">{error}</p>}
 
         <button className="btn btn-primary" type="submit" disabled={submitting}>

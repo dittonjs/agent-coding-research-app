@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { createUser, createSession } from "./users.js";
 import { getActiveStudy } from "./studies.js";
 
-export async function createAnonymousParticipant() {
+export async function createAnonymousParticipant(forceGroup) {
   const uuid = crypto.randomUUID();
   const username = `p_${uuid.slice(0, 8)}`;
   const email = `${username}@study.local`;
@@ -12,7 +12,12 @@ export async function createAnonymousParticipant() {
   const user = await createUser(username, email, password);
   const sessionId = await createSession(user.id);
 
-  const groupAssignment = Math.random() < 0.5 ? "control" : "test";
+  const groupAssignment =
+    forceGroup === "control" || forceGroup === "test"
+      ? forceGroup
+      : Math.random() < 0.5
+        ? "control"
+        : "test";
 
   const activeStudy = await getActiveStudy();
 
@@ -49,14 +54,6 @@ export async function updateDemographics(participantId, data) {
       data.ethnicity,
       participantId,
     ]
-  );
-  return result.rows[0];
-}
-
-export async function updateGroupAssignment(participantId, group) {
-  const result = await pool.query(
-    "UPDATE participants SET group_assignment = $1 WHERE id = $2 RETURNING *",
-    [group, participantId]
   );
   return result.rows[0];
 }

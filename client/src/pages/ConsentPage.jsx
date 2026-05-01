@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useStudy } from "../hooks/useStudy";
 
 export default function ConsentPage() {
   const { setParticipant } = useStudy();
+  const [searchParams] = useSearchParams();
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [studyActive, setStudyActive] = useState(null); // null = loading
@@ -18,11 +20,14 @@ export default function ConsentPage() {
     setSubmitting(true);
     setError("");
 
+    const g = searchParams.get("g");
+    const forceGroup = g === "control" || g === "test" ? g : undefined;
+
     try {
       const res = await fetch("/api/study/begin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ consentAccepted: true }),
+        body: JSON.stringify({ consentAccepted: true, forceGroup }),
       });
 
       const data = await res.json();
