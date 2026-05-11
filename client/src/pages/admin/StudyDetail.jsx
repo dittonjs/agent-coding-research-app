@@ -2,6 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAdmin } from "./AdminLayout";
 
+function formatDuration(ms) {
+  if (!ms || ms < 0) return "—";
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export default function StudyDetail() {
   const { studyId } = useParams();
   const { studies, handleToggleActive, handleLogout } = useAdmin();
@@ -92,28 +103,35 @@ export default function StudyDetail() {
             <th>CS Year</th>
             <th>AI Usage</th>
             <th>Created</th>
+            <th>Duration</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          {participants.map((p) => (
-            <tr key={p.id}>
-              <td>{p.id}</td>
-              <td>{p.group_assignment}</td>
-              <td>{p.current_step}/8</td>
-              <td>{p.cs_year || "\u2014"}</td>
-              <td>{p.prior_ai_usage || "\u2014"}</td>
-              <td>{new Date(p.created_at).toLocaleDateString()}</td>
-              <td>
-                <Link to={`/admin/studies/${studyId}/participants/${p.id}`} className="btn btn-primary btn-sm">
-                  View
-                </Link>
-              </td>
-            </tr>
-          ))}
+          {participants.map((p) => {
+            const durationMs = p.last_activity_at
+              ? new Date(p.last_activity_at).getTime() - new Date(p.created_at).getTime()
+              : 0;
+            return (
+              <tr key={p.id}>
+                <td>{p.id}</td>
+                <td>{p.group_assignment}</td>
+                <td>{p.current_step}/8</td>
+                <td>{p.cs_year || "\u2014"}</td>
+                <td>{p.prior_ai_usage || "\u2014"}</td>
+                <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                <td>{formatDuration(durationMs)}</td>
+                <td>
+                  <Link to={`/admin/studies/${studyId}/participants/${p.id}`} className="btn btn-primary btn-sm">
+                    View
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
           {participants.length === 0 && (
             <tr>
-              <td colSpan="7" style={{ textAlign: "center" }}>
+              <td colSpan="8" style={{ textAlign: "center" }}>
                 No participants yet.
               </td>
             </tr>

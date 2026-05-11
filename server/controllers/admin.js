@@ -131,7 +131,16 @@ router.get("/participants", requireAdmin, async (req, res) => {
         p.ethnicity,
         p.study_id,
         p.consent_timestamp,
-        p.created_at
+        p.created_at,
+        GREATEST(
+          p.created_at,
+          COALESCE((SELECT MAX(created_at) FROM test_results WHERE participant_id = p.id), p.created_at),
+          COALESCE((SELECT MAX(created_at) FROM code_submissions WHERE participant_id = p.id), p.created_at),
+          COALESCE((SELECT MAX(created_at) FROM survey_responses WHERE participant_id = p.id), p.created_at),
+          COALESCE((SELECT MAX(created_at) FROM chat_messages WHERE participant_id = p.id), p.created_at),
+          COALESCE((SELECT MAX(created_at) FROM editor_events WHERE participant_id = p.id), p.created_at),
+          COALESCE((SELECT MAX(created_at) FROM interaction_events WHERE participant_id = p.id), p.created_at)
+        ) AS last_activity_at
       FROM participants p
     `;
     const params = [];
