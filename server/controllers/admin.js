@@ -360,26 +360,46 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
       for (const batch of batches) {
         const events = Array.isArray(batch.events) ? batch.events : [];
         for (const ev of events) {
-          // Only the text-editor changes are exported here.
-          if (ev.source === "visualization") continue;
-
           const clientTimestamp = sessionStartUnix + (ev.ts || 0);
 
-          if (ev.fullContent !== undefined) {
+          if (ev.source === "visualization") {
+            // play / replay / randomize interactions inside the viz iframe.
+            editorRows.push([
+              rowIndex++, "", eventId++, pid, "",
+              "study.txt", "X-Visualization", 0, "",
+              "", "",
+              ev.eventType || "", clientTimestamp,
+              "", "study.txt", ev.vizTimestamp ?? "",
+            ]);
+            continue;
+          }
+
+          if (ev.source === "file-init") {
+            // Synthetic event recording the editor's contents at session start.
+            editorRows.push([
+              rowIndex++, "", eventId++, pid, "",
+              "study.txt", "File.Edit", 0, "",
+              ev.fullContent || "", "",
+              "FileInit", 0,
+              "", "study.txt", "",
+            ]);
+          } else if (ev.fullContent !== undefined) {
             // Agent replacement or language switch — full file rewrite.
             editorRows.push([
               rowIndex++, "", eventId++, pid, "",
               "study.txt", "File.Edit", 0, "",
-              ev.fullContent, "", ev.source, clientTimestamp,
+              ev.fullContent, ev.previousContent || "",
+              ev.source, clientTimestamp,
               "", "study.txt", "",
             ]);
           } else if (Array.isArray(ev.changes)) {
             for (const c of ev.changes) {
-              const startLine = c.range?.startLine ?? 1;
+              const offset = c.rangeOffset ?? 0;
               editorRows.push([
                 rowIndex++, "", eventId++, pid, "",
-                "study.txt", "File.Edit", startLine, "",
-                c.text || "", "", ev.source, clientTimestamp,
+                "study.txt", "File.Edit", offset, "",
+                c.text || "", c.deletedText || "",
+                ev.source, clientTimestamp,
                 "", "study.txt", "",
               ]);
             }

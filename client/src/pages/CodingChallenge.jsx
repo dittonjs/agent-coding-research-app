@@ -56,6 +56,9 @@ export default function CodingChallenge() {
   const { participant, setParticipant } = useStudy();
   const savedLang = loadSaved("study_language", "javascript");
   const savedCode = loadSaved("study_code", STARTER_CODE[savedLang] || STARTER_CODE.javascript);
+  // Fresh start = no prior code in localStorage on initial mount. We capture
+  // this so we can emit a synthetic FileInit event with the starter template.
+  const isFreshStartRef = useRef(loadSaved("study_code", null) === null);
   const [language, setLanguage] = useState(savedLang);
   const [code, setCode] = useState(savedCode);
   const [submitted, setSubmitted] = useState(false);
@@ -73,6 +76,10 @@ export default function CodingChallenge() {
   const sessionStartRef = useRef(Date.now());
   const pastedRef = useRef(false);
   const programmaticChangeRef = useRef(false);
+  // Shadow of the editor content, kept in sync with each change. Lets us read
+  // the deleted text and the rangeOffset from the pre-change state, since
+  // onDidChangeModelContent fires after the model has already been updated.
+  const shadowTextRef = useRef("");
 
   codeRef.current = code;
 
@@ -179,6 +186,15 @@ export default function CodingChallenge() {
 
   const handleEditorMount = useCallback((editor) => {
     editorRef.current = editor;
+    const initialContent = editor.getValue();
+    shadowTextRef.current = initialContent;
+
+    // Record the initial editor contents so the export has a FileInit anchor.
+    eventsBufferRef.current.push({
+      ts: 0,
+      source: "file-init",
+      fullContent: initialContent,
+    });
 
     // Flag paste events so classifySource can distinguish from autocomplete
     editor.onDidPaste(() => {
@@ -188,8 +204,10 @@ export default function CodingChallenge() {
     editor.onDidChangeModelContent((e) => {
       // Skip changes triggered by programmatic setCode (agent/language change)
       // — those are already recorded by their own source-specific event.
+      // The shadow still needs to track the new content.
       if (programmaticChangeRef.current) {
         programmaticChangeRef.current = false;
+        shadowTextRef.current = editor.getValue();
         return;
       }
 
@@ -197,22 +215,28 @@ export default function CodingChallenge() {
       if (e.isUndoing) source = "undo";
       if (e.isRedoing) source = "redo";
 
-      const event = {
+      // rangeOffset refers to the document state before the event, so
+      // we read deletedText from the shadow BEFORE syncing it.
+      const before = shadowTextRef.current;
+      const enrichedChanges = e.changes.map((c) => ({
+        range: {
+          startLine: c.range.startLineNumber,
+          startCol: c.range.startColumn,
+          endLine: c.range.endLineNumber,
+          endCol: c.range.endColumn,
+        },
+        rangeOffset: c.rangeOffset,
+        rangeLength: c.rangeLength,
+        text: c.text,
+        deletedText: before.slice(c.rangeOffset, c.rangeOffset + c.rangeLength),
+      }));
+      shadowTextRef.current = editor.getValue();
+
+      eventsBufferRef.current.push({
         ts: Date.now() - sessionStartRef.current,
         source,
-        changes: e.changes.map((c) => ({
-          range: {
-            startLine: c.range.startLineNumber,
-            startCol: c.range.startColumn,
-            endLine: c.range.endLineNumber,
-            endCol: c.range.endColumn,
-          },
-          rangeLength: c.rangeLength,
-          text: c.text,
-        })),
-      };
-
-      eventsBufferRef.current.push(event);
+        changes: enrichedChanges,
+      });
     });
   }, []);
 
@@ -238,6 +262,7 @@ export default function CodingChallenge() {
       fromLanguage: oldLang,
       toLanguage: newLang,
       fullContent: STARTER_CODE[newLang],
+      previousContent: shadowTextRef.current,
     });
 
     setLanguage(newLang);
@@ -293,6 +318,7 @@ export default function CodingChallenge() {
           ts: Date.now() - sessionStartRef.current,
           source: "agent",
           fullContent: data.code,
+          previousContent: shadowTextRef.current,
         });
         programmaticChangeRef.current = true;
         setCode(data.code);
