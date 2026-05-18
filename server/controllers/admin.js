@@ -329,27 +329,62 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
       m.participant_id, m.id, m.role, m.content, m.code_snapshot || "", m.created_at,
     ]);
 
-    // ── CSV 3: editor_events.csv ──
-    const editorHeaders = ["participant_id", "timestamp_ms", "source", "change_detail"];
+    // ── CSV 3: editor_events.csv (ProgSnap2-style) ──
+    const editorHeaders = [
+      "index", "Unnamed: 0", "EventID", "SubjectID", "AssignmentID",
+      "CodeStateSection", "EventType", "SourceLocation", "EditType",
+      "InsertText", "DeleteText", "X-Metadata", "ClientTimestamp",
+      "ToolInstances", "CodeStateID", "X-UserActionID",
+    ];
     const editorRows = [];
+
+    // Group batches by participant so we can compute a per-participant session
+    // start (used to turn ev.ts relative-ms into absolute unix-ms).
+    const batchesByP = {};
     for (const batch of editorEvents.rows) {
-      const events = Array.isArray(batch.events) ? batch.events : [];
-      for (const ev of events) {
-        let detail = "";
-        if (ev.fullContent !== undefined) {
-          detail = ev.source === "language-change"
-            ? `${ev.fromLanguage} -> ${ev.toLanguage}`
-            : "full content replaced";
-        } else if (ev.changes) {
-          detail = ev.changes.map((c) => {
-            const loc = `L${c.range?.startLine}:${c.range?.startCol}`;
-            if (c.text === "" && c.rangeLength > 0) return `deleted ${c.rangeLength} chars at ${loc}`;
-            const preview = (c.text || "").slice(0, 100).replace(/\n/g, "\\n");
-            if (c.rangeLength > 0) return `replaced ${c.rangeLength} chars with "${preview}" at ${loc}`;
-            return `inserted "${preview}" at ${loc}`;
-          }).join("; ");
+      if (!batchesByP[batch.participant_id]) batchesByP[batch.participant_id] = [];
+      batchesByP[batch.participant_id].push(batch);
+    }
+
+    let rowIndex = 0;
+    for (const pid of Object.keys(batchesByP)) {
+      const batches = batchesByP[pid].slice().sort(
+        (a, b) => new Date(a.created_at) - new Date(b.created_at)
+      );
+      const firstBatch = batches[0];
+      const firstEvents = Array.isArray(firstBatch.events) ? firstBatch.events : [];
+      const firstTs = firstEvents.length > 0 ? (firstEvents[0].ts || 0) : 0;
+      const sessionStartUnix = new Date(firstBatch.created_at).getTime() - firstTs;
+
+      let eventId = 1;
+      for (const batch of batches) {
+        const events = Array.isArray(batch.events) ? batch.events : [];
+        for (const ev of events) {
+          // Only the text-editor changes are exported here.
+          if (ev.source === "visualization") continue;
+
+          const clientTimestamp = sessionStartUnix + (ev.ts || 0);
+
+          if (ev.fullContent !== undefined) {
+            // Agent replacement or language switch — full file rewrite.
+            editorRows.push([
+              rowIndex++, "", eventId++, pid, "",
+              "study.txt", "File.Edit", 0, "",
+              ev.fullContent, "", ev.source, clientTimestamp,
+              "", "study.txt", "",
+            ]);
+          } else if (Array.isArray(ev.changes)) {
+            for (const c of ev.changes) {
+              const startLine = c.range?.startLine ?? 1;
+              editorRows.push([
+                rowIndex++, "", eventId++, pid, "",
+                "study.txt", "File.Edit", startLine, "",
+                c.text || "", "", ev.source, clientTimestamp,
+                "", "study.txt", "",
+              ]);
+            }
+          }
         }
-        editorRows.push([batch.participant_id, ev.ts, ev.source, detail]);
       }
     }
 
