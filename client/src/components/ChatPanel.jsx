@@ -3,9 +3,11 @@ import { useState, useRef, useEffect } from "react";
 export default function ChatPanel({ messages, onSend, isLoading, disabled }) {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
+  const chatInputRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    chatInputRef.current?.focus();
   }, [messages, isLoading]);
 
   function handleSubmit(e) {
@@ -55,6 +57,7 @@ export default function ChatPanel({ messages, onSend, isLoading, disabled }) {
           onKeyDown={handleKeyDown}
           placeholder={disabled ? "Challenge complete" : "Tell me what code to write..."}
           disabled={isLoading || disabled}
+          ref={chatInputRef}
           rows={2}
         />
         <button

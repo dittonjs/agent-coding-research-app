@@ -238,7 +238,7 @@ export default function SortingTest({ title, description, endpoint, initialArray
           )}
           {showIDontKnow && questionIndex === 0 && history.length === 1 && (
             <button className="btn btn-secondary" onClick={() => submitResults(true)}>
-              I don't know selection sort
+              I don't know selection sort (don't worry - we will teach it to you)
             </button>
           )}
         </div>

@@ -76,7 +76,7 @@ export default function ConsentPage() {
           examines differences in student behavior and outcomes when using
           constrained agentic AI compared to traditional programming without AI
           assistance. You are being asked to participate in this research
-          because you are an adult enrolled in a computer science course at USU.
+          because you are an adult enrolled in a computer science course.
         </p>
 
         <p>
