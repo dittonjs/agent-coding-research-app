@@ -5,6 +5,7 @@ import {
   updateDemographics,
   updateStep,
 } from "../models/participants.js";
+import { recordIncentiveAndComplete } from "../models/incentives.js";
 import { saveTestResult } from "../models/testResults.js";
 import { saveCodeSubmission } from "../models/codeSubmissions.js";
 import { saveSurveyResponse } from "../models/surveyResponses.js";
@@ -236,7 +237,6 @@ router.post("/post-survey", requireAuth, async (req, res) => {
     const updated = await updateStep(participant.id, 8);
 
     res.json({
-      message: "Study complete. Thank you for participating!",
       participant: {
         id: updated.id,
         groupAssignment: updated.group_assignment,
@@ -245,6 +245,51 @@ router.post("/post-survey", requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error("Post-survey error:", err);
+    res.status(500).json({ error: "Server error." });
+  }
+});
+
+// POST /api/study/incentive
+// Collect optional name/email for sending a gift card, then finish the study.
+router.post("/incentive", requireAuth, async (req, res) => {
+  try {
+    const participant = await loadParticipant(req, res, 8);
+    if (!participant) return;
+
+    const { name, email, declined } = req.body;
+
+    let cleanName = null;
+    let cleanEmail = null;
+    if (!declined) {
+      cleanName = typeof name === "string" ? name.trim() : "";
+      cleanEmail = typeof email === "string" ? email.trim() : "";
+
+      if (!cleanName || !cleanEmail) {
+        return res.status(400).json({ error: "Name and email are required." });
+      }
+      if (cleanName.length > 255 || cleanEmail.length > 255) {
+        return res.status(400).json({ error: "Name or email is too long." });
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        return res.status(400).json({ error: "Please enter a valid email address." });
+      }
+    }
+
+    const updated = await recordIncentiveAndComplete(participant, {
+      name: cleanName,
+      email: cleanEmail,
+      declined: !!declined,
+    });
+
+    res.json({
+      participant: {
+        id: updated.id,
+        groupAssignment: updated.group_assignment,
+        currentStep: updated.current_step,
+      },
+    });
+  } catch (err) {
+    console.error("Incentive error:", err);
     res.status(500).json({ error: "Server error." });
   }
 });

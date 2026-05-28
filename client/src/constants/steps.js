@@ -6,7 +6,8 @@ export const STEPS = {
   CODING_CHALLENGE: 5,
   POST_TEST: 6,
   POST_SURVEY: 7,
-  COMPLETE: 8,
+  INCENTIVE: 8,
+  COMPLETE: 9,
 };
 
 export const STEP_LABELS = {
@@ -17,5 +18,6 @@ export const STEP_LABELS = {
   [STEPS.CODING_CHALLENGE]: "Coding",
   [STEPS.POST_TEST]: "Post-Test",
   [STEPS.POST_SURVEY]: "Post-Survey",
+  [STEPS.INCENTIVE]: "Incentive",
   [STEPS.COMPLETE]: "Complete",
 };

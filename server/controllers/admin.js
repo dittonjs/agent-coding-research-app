@@ -256,8 +256,9 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
       return res.status(400).json({ error: "No participants in this study." });
     }
 
-    // Fetch all related data
-    const [testResults, codeSubmissions, surveyResponses, chatMessages, editorEvents, interactionEvents] =
+    // Fetch all related data. Incentives are linked to the study (not the
+    // participant), so they are queried by study_id and kept in their own CSV.
+    const [testResults, codeSubmissions, surveyResponses, chatMessages, editorEvents, interactionEvents, incentivesResult] =
       await Promise.all([
         pool.query("SELECT * FROM test_results WHERE participant_id = ANY($1) ORDER BY participant_id, test_type", [pIds]),
         pool.query("SELECT * FROM code_submissions WHERE participant_id = ANY($1) ORDER BY participant_id", [pIds]),
@@ -265,6 +266,7 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
         pool.query("SELECT * FROM chat_messages WHERE participant_id = ANY($1) ORDER BY participant_id, created_at", [pIds]),
         pool.query("SELECT * FROM editor_events WHERE participant_id = ANY($1) ORDER BY participant_id, batch_seq", [pIds]),
         pool.query("SELECT * FROM interaction_events WHERE participant_id = ANY($1) ORDER BY participant_id, batch_seq", [pIds]),
+        pool.query("SELECT * FROM incentives WHERE study_id = $1 ORDER BY created_at", [id]),
       ]);
 
     // Index data by participant
@@ -322,6 +324,14 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
         p.created_at,
       ];
     });
+
+    // ── incentives.csv ──
+    // Gift-card contact list for this study. Deliberately has no participant_id
+    // or ordering tie to participants.csv, to preserve response anonymity.
+    const incentiveHeaders = ["name", "email", "created_at"];
+    const incentiveRows = incentivesResult.rows.map((i) => [
+      i.name, i.email, i.created_at,
+    ]);
 
     // ── CSV 2: chat_messages.csv ──
     const chatHeaders = ["participant_id", "message_id", "role", "content", "code_snapshot", "created_at"];
@@ -462,6 +472,7 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
     archive.pipe(res);
 
     archive.append(toCsv(pHeaders, pRows), { name: "participants.csv" });
+    archive.append(toCsv(incentiveHeaders, incentiveRows), { name: "incentives.csv" });
     archive.append(toCsv(chatHeaders, chatRows), { name: "chat_messages.csv" });
     archive.append(toCsv(editorHeaders, editorRows), { name: "editor_events.csv" });
     archive.append(toCsv(interactionHeaders, interactionRows), { name: "interaction_events.csv" });

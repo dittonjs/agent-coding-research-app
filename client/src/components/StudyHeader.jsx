@@ -7,6 +7,7 @@ const visibleSteps = [
   STEPS.CODING_CHALLENGE,
   STEPS.POST_TEST,
   STEPS.POST_SURVEY,
+  STEPS.INCENTIVE,
 ];
 
 export default function StudyHeader({ currentStep }) {

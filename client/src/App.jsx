@@ -9,6 +9,7 @@ import Instructions from "./pages/Instructions";
 import CodingChallenge from "./pages/CodingChallenge";
 import PostTest from "./pages/PostTest";
 import PostSurvey from "./pages/PostSurvey";
+import IncentivePage from "./pages/IncentivePage";
 import StudyComplete from "./pages/StudyComplete";
 import AdminLayout from "./pages/admin/AdminLayout";
 import StudiesList from "./pages/admin/StudiesList";
@@ -50,6 +51,7 @@ function StudyFlow() {
         {currentStep === STEPS.CODING_CHALLENGE && <CodingChallenge />}
         {currentStep === STEPS.POST_TEST && <PostTest />}
         {currentStep === STEPS.POST_SURVEY && <PostSurvey />}
+        {currentStep === STEPS.INCENTIVE && <IncentivePage />}
         {currentStep >= STEPS.COMPLETE && <StudyComplete />}
       </main>
     </>

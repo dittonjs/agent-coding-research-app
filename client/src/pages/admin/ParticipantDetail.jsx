@@ -37,7 +37,7 @@ export default function ParticipantDetail() {
             <dt>Ethnicity</dt><dd>{detail.participant.ethnicity || "\u2014"}</dd>
             <dt>CS Year</dt><dd>{detail.participant.cs_year || "\u2014"}</dd>
             <dt>AI Usage</dt><dd>{detail.participant.prior_ai_usage || "\u2014"}</dd>
-            <dt>Current Step</dt><dd>{detail.participant.current_step}/8</dd>
+            <dt>Current Step</dt><dd>{detail.participant.current_step}/9</dd>
           </dl>
         </div>
 
