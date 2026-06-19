@@ -46,8 +46,9 @@ export default function IncentivePage() {
     <div className="survey-page">
       <h2>Claim Your Gift Card</h2>
       <p>
-        As a thank-you for participating, we'd like to send you a virtual Amazon
-        gift card. Please enter the name and email address we should send it to.
+        As a thank-you for participating, we'd like to send you a virtual Amazon gift card.
+        Please enter the name and email address we should send it to.
+        You will receive the gift card in the next few weeks.
       </p>
       <p>
         Your contact information is stored separately from your anonymous study
