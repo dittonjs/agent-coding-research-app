@@ -42,13 +42,14 @@ export async function findParticipantByUserId(userId) {
 export async function updateDemographics(participantId, data) {
   const result = await pool.query(
     `UPDATE participants
-     SET age_range = $1, gender = $2, cs_year = $3,
-         prior_ai_usage = $4, ethnicity = $5, current_step = 3
-     WHERE id = $6
+     SET age_range = $1, gender = $2, program_of_study = $3, cs_year = $4,
+         prior_ai_usage = $5, ethnicity = $6, current_step = 3
+     WHERE id = $7
      RETURNING *`,
     [
       data.ageRange,
       data.gender,
+      data.programOfStudy,
       data.csYear,
       data.priorAiUsage,
       data.ethnicity,

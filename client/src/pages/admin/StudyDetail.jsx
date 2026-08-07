@@ -100,7 +100,8 @@ export default function StudyDetail() {
             <th>ID</th>
             <th>Group</th>
             <th>Step</th>
-            <th>CS Year</th>
+            <th>Program</th>
+            <th>Year</th>
             <th>AI Usage</th>
             <th>Created</th>
             <th>Duration</th>
@@ -117,6 +118,7 @@ export default function StudyDetail() {
                 <td>{p.id}</td>
                 <td>{p.group_assignment}</td>
                 <td>{p.current_step}/9</td>
+                <td>{p.program_of_study || "\u2014"}</td>
                 <td>{p.cs_year || "\u2014"}</td>
                 <td>{p.prior_ai_usage || "\u2014"}</td>
                 <td>{new Date(p.created_at).toLocaleDateString()}</td>

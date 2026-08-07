@@ -35,7 +35,8 @@ export default function ParticipantDetail() {
             <dt>Age Range</dt><dd>{detail.participant.age_range || "\u2014"}</dd>
             <dt>Gender</dt><dd>{detail.participant.gender || "\u2014"}</dd>
             <dt>Ethnicity</dt><dd>{detail.participant.ethnicity || "\u2014"}</dd>
-            <dt>CS Year</dt><dd>{detail.participant.cs_year || "\u2014"}</dd>
+            <dt>Program of Study</dt><dd>{detail.participant.program_of_study || "\u2014"}</dd>
+            <dt>Year</dt><dd>{detail.participant.cs_year || "\u2014"}</dd>
             <dt>AI Usage</dt><dd>{detail.participant.prior_ai_usage || "\u2014"}</dd>
             <dt>Current Step</dt><dd>{detail.participant.current_step}/9</dd>
           </dl>

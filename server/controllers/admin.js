@@ -126,6 +126,7 @@ router.get("/participants", requireAdmin, async (req, res) => {
         p.current_step,
         p.age_range,
         p.gender,
+        p.program_of_study,
         p.cs_year,
         p.prior_ai_usage,
         p.ethnicity,
@@ -299,7 +300,7 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
 
     const pHeaders = [
       "participant_id", "group_assignment", "current_step",
-      "age_range", "gender", "ethnicity", "cs_year", "prior_ai_usage",
+      "age_range", "gender", "ethnicity", "program_of_study", "cs_year", "prior_ai_usage",
       "pre_test_score", "pre_test_total", "pre_test_duration_ms", "pre_test_skipped",
       "post_test_score", "post_test_total", "post_test_duration_ms", "post_test_skipped",
       "code_submission_duration_ms", "code_submitted", "code_gave_up",
@@ -314,7 +315,7 @@ router.get("/studies/:id/export", requireAdmin, async (req, res) => {
 
       return [
         p.id, p.group_assignment, p.current_step,
-        p.age_range, p.gender, p.ethnicity, p.cs_year, p.prior_ai_usage,
+        p.age_range, p.gender, p.ethnicity, p.program_of_study, p.cs_year, p.prior_ai_usage,
         pre?.results?.correctCount ?? "", pre?.results?.totalSteps ?? "",
         pre?.results?.durationMs ?? "", pre?.results?.skipped ?? "",
         post?.results?.correctCount ?? "", post?.results?.totalSteps ?? "",

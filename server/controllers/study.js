@@ -89,11 +89,12 @@ router.post("/demographics", requireAuth, async (req, res) => {
     const participant = await loadParticipant(req, res, 2);
     if (!participant) return;
 
-    const { ageRange, gender, csYear, priorAiUsage, ethnicity } = req.body;
+    const { ageRange, gender, programOfStudy, csYear, priorAiUsage, ethnicity } = req.body;
 
     const updated = await updateDemographics(participant.id, {
       ageRange,
       gender,
+      programOfStudy,
       csYear,
       priorAiUsage,
       ethnicity,

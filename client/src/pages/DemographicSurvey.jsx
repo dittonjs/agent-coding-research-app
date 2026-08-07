@@ -9,6 +9,7 @@ export default function DemographicSurvey() {
     genderOther: "",
     ethnicity: "",
     ethnicityOther: "",
+    programOfStudy: "",
     csYear: "",
     priorAiUsage: "",
   });
@@ -129,7 +130,18 @@ export default function DemographicSurvey() {
         )}
 
         <label>
-          Year in CS Program
+          Program of Study
+          <select name="programOfStudy" value={form.programOfStudy} onChange={handleChange} required>
+            <option value="">Select...</option>
+            <option value="computer-science">Computer Science</option>
+            <option value="engineering">Engineering</option>
+            <option value="data-science-ai">Data Science / Artificial Intelligence</option>
+            <option value="math-statistics">Math / Statistics</option>
+          </select>
+        </label>
+
+        <label>
+          Year in Program
           <select name="csYear" value={form.csYear} onChange={handleChange} required>
             <option value="">Select...</option>
             <option value="freshman">Freshman</option>
