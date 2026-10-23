@@ -32,11 +32,7 @@ cp .env.example .env
 Then edit `.env` with your values:
 
 ```
-DB_HOST=localhost
-DB_USER=assignment4
-DB_PASSWORD=yourpasswordhere
-DB_NAME=assignment4
-DB_PORT=5432
+DATABASE_URL=your url
 PORT=3000
 VITE_ORIGIN=http://localhost:5173
 ```
